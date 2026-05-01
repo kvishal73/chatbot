@@ -1,1 +1,1 @@
-it is my major pproject in college
+it is my major project in college
