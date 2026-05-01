@@ -1,0 +1,1350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Mini ChatGPT Clone</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: "Inter", system-ui, -apple-system, sans-serif;
+      cursor: none;
+    }
+
+    :root {
+      --bg: #0f0f23;
+      --bg-secondary: #1a1a2e;
+      --bg-glass: rgba(26, 26, 46, 0.7);
+      --border: rgba(255, 255, 255, 0.1);
+      --accent: #10a37f;
+      --accent-hover: #0d8c6b;
+      --text: #ececf1;
+      --text-secondary: #8e8ea0;
+      --danger: #ef4444;
+    }
+
+    body {
+      background: var(--bg);
+      background-image:
+        radial-gradient(at 20% 80%, rgba(16, 163, 127, 0.15) 0px, transparent 50%),
+        radial-gradient(at 80% 20%, rgba(139, 92, 246, 0.15) 0px, transparent 50%);
+      color: var(--text);
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ===== DYNAMIC CURSOR ===== */
+    .cursor-glow {
+      position: fixed;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%, -50%);
+      transition: width 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), 
+                  height 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+                  background 0.3s ease;
+      mix-blend-mode: screen;
+    }
+
+    .cursor-glow.search {
+      width: 70px;
+      height: 70px;
+      background: radial-gradient(circle, rgba(59, 130, 246, 0.8) 0%, transparent 70%) !important;
+    }
+
+    .cursor-glow.button {
+      width: 50px;
+      height: 50px;
+      background: radial-gradient(circle, rgba(236, 72, 153, 0.6) 0%, transparent 70%) !important;
+    }
+
+    .cursor-glow.menu {
+      width: 60px;
+      height: 60px;
+      background: radial-gradient(circle, rgba(139, 92, 246, 0.7) 0%, transparent 70%) !important;
+    }
+
+    .cursor-glow.message {
+      width: 45px;
+      height: 45px;
+      background: radial-gradient(circle, rgba(16, 163, 127, 0.6) 0%, transparent 70%) !important;
+    }
+
+    /* ===== THREE DOT MENU ===== */
+    .global-menu {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      z-index: 100;
+    }
+
+    .dots-btn {
+      background: var(--bg-glass);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border);
+      color: var(--text);
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      cursor: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .dots-btn:hover {
+      background: rgba(139, 92, 246, 0.2);
+      border-color: rgba(139, 92, 246, 0.6);
+      transform: scale(1.1) rotate(90deg);
+      box-shadow: 0 4px 20px rgba(139, 92, 246, 0.4);
+    }
+
+    .dropdown {
+      position: absolute;
+      top: 54px;
+      right: 0;
+      background: var(--bg-glass);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      width: 180px;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(-10px);
+      transition: all 0.2s;
+      overflow: hidden;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    .dropdown.show {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+
+    .dropdown button {
+      width: 100%;
+      padding: 12px 16px;
+      background: transparent;
+      border: none;
+      color: var(--text);
+      text-align: left;
+      cursor: none;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: all 0.2s;
+    }
+
+    .dropdown button:hover {
+      background: rgba(139, 92, 246, 0.15);
+      color: #a78bfa;
+      transform: translateX(4px);
+    }
+
+    .dropdown button.active {
+      background: rgba(16, 163, 127, 0.15);
+      color: var(--accent);
+    }
+
+    /* ===== LANDING PAGE ===== */
+    .landing-page {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.5s ease;
+    }
+
+    .search-container {
+      width: 100%;
+      max-width: 700px;
+      padding: 0 24px;
+      animation: slideUp 0.6s ease;
+    }
+
+    .logo {
+      text-align: center;
+      font-size: 48px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      background: linear-gradient(135deg, var(--accent), #8b5cf6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: var(--text-secondary);
+      margin-bottom: 40px;
+      font-size: 16px;
+    }
+
+    .search-box {
+      display: flex;
+      gap: 12px;
+      background: var(--bg-glass);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px 20px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .search-box:hover {
+      transform: scale(1.02);
+      border-color: rgba(59, 130, 246, 0.6);
+      box-shadow: 0 12px 40px rgba(59, 130, 246, 0.3);
+      background: rgba(26, 26, 46, 0.85);
+    }
+
+    .search-box:focus-within {
+      transform: scale(1.03);
+      border-color: var(--accent);
+      box-shadow: 0 12px 40px rgba(16, 163, 127, 0.4);
+    }
+
+    .search-box input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-size: 16px;
+      cursor: none;
+      transition: all 0.3s;
+    }
+
+    .search-box input::placeholder {
+      color: var(--text-secondary);
+      transition: color 0.3s;
+    }
+
+    .search-box:hover input::placeholder {
+      color: rgba(59, 130, 246, 0.7);
+    }
+
+    .search-box button {
+      background: var(--accent);
+      border: none;
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 10px;
+      cursor: none;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.3s;
+    }
+
+    .search-box:hover button {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      transform: translateY(-1px) scale(1.05);
+      box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4);
+    }
+
+    /* ===== APP PAGE ===== */
+    .app-page {
+      display: none;
+      height: 100vh;
+      flex-direction: column;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .app-page.active {
+      display: flex;
+    }
+
+    .topbar {
+      height: 60px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 20px;
+      background: var(--bg-glass);
+      backdrop-filter: blur(20px);
+      position: relative;
+    }
+
+    .page-title {
+      font-weight: 600;
+      font-size: 16px;
+    }
+
+    .user-badge {
+      position: absolute;
+      left: 20px;
+      font-size: 14px;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .content-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+    }
+
+    /* ===== LOGIN FORM ===== */
+    .login-form {
+      max-width: 420px;
+      margin: 80px auto;
+      background: var(--bg-glass);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border);
+      padding: 32px;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      animation: slideUp 0.4s ease;
+    }
+
+    .login-form h2 {
+      margin-bottom: 8px;
+      font-size: 24px;
+    }
+
+    .login-form p {
+      color: var(--text-secondary);
+      font-size: 14px;
+      margin-bottom: 24px;
+    }
+
+    .input-group {
+      margin-bottom: 16px;
+    }
+
+    .input-group label {
+      display: block;
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+
+    .login-form input {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--bg-secondary);
+      color: var(--text);
+      font-size: 14px;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      cursor: none;
+    }
+
+    .login-form input:hover {
+      border-color: rgba(59, 130, 246, 0.5);
+      background: rgba(26, 26, 46, 0.9);
+      transform: scale(1.01);
+      box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2);
+    }
+
+    .login-form input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .login-form button {
+      width: 100%;
+      padding: 12px;
+      border-radius: 10px;
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      cursor: none;
+      font-size: 15px;
+      font-weight: 600;
+      margin-top: 8px;
+      transition: all 0.2s;
+    }
+
+    .login-form button:hover {
+      background: var(--accent-hover);
+      transform: translateY(-1px) scale(1.02);
+    }
+
+    .login-form button.danger {
+      background: var(--danger);
+      margin-top: 12px;
+    }
+
+    .login-form button.danger:hover {
+      background: #dc2626;
+    }
+
+    .error {
+      color: var(--danger);
+      font-size: 13px;
+      margin-top: 8px;
+    }
+
+    .user-info-card {
+      background: rgba(16, 163, 127, 0.1);
+      border: 1px solid rgba(16, 163, 127, 0.2);
+      padding: 16px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* ===== CHAT MESSAGES ===== */
+    .messages {
+      max-width: 900px;
+      margin: 0 auto;
+      padding-bottom: 130px;
+    }
+
+    .message-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+      animation: messageSlide 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+      position: relative;
+      align-items: flex-start;
+    }
+
+    .message-row.user-row {
+      flex-direction: row-reverse;
+      justify-content: flex-start;
+    }
+
+    .message-row.ai-row {
+      flex-direction: row;
+      justify-content: flex-start;
+    }
+
+    @keyframes messageSlide {
+      from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .message-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+      transition: transform 0.3s ease;
+    }
+
+    .message-row:hover .message-avatar {
+      transform: scale(1.1) rotate(5deg);
+    }
+
+    .message-avatar.user-avatar {
+      background: linear-gradient(135deg, #10a37f, #0d8c6b);
+      box-shadow: 0 4px 16px rgba(16, 163, 127, 0.4);
+    }
+
+    .message-avatar.ai-avatar {
+      background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+      box-shadow: 0 4px 16px rgba(139, 92, 246, 0.4);
+    }
+
+    .message-content {
+      max-width: 70%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .user-row .message-content {
+      align-items: flex-end;
+    }
+
+    .ai-row .message-content {
+      align-items: flex-start;
+    }
+
+    .message-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+      padding: 0 4px;
+    }
+
+    .user-row .message-header {
+      flex-direction: row-reverse;
+    }
+
+    .message-name {
+      font-weight: 700;
+      font-size: 13px;
+      color: var(--text);
+    }
+
+    .message-time {
+      font-size: 11px;
+      color: var(--text-secondary);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .message-row:hover .message-time {
+      opacity: 1;
+    }
+
+    .msg-user, .msg-bot {
+      padding: 14px 18px;
+      border-radius: 18px;
+      line-height: 1.7;
+      font-size: 15px;
+      position: relative;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      word-wrap: break-word;
+    }
+
+    .msg-user {
+      background: linear-gradient(135deg, rgba(16, 163, 127, 0.3), rgba(16, 163, 127, 0.15));
+      border: 1px solid rgba(16, 163, 127, 0.4);
+      border-bottom-right-radius: 4px;
+      color: var(--text);
+    }
+
+    .msg-bot {
+      background: linear-gradient(135deg, rgba(26, 26, 46, 0.95), rgba(26, 26, 46, 0.85));
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(20px);
+      border-bottom-left-radius: 4px;
+    }
+
+    .msg-user:hover {
+      transform: translateY(-3px) scale(1.01);
+      border-color: rgba(16, 163, 127, 0.7);
+      box-shadow: 0 8px 28px rgba(16, 163, 127, 0.4);
+      background: linear-gradient(135deg, rgba(16, 163, 127, 0.4), rgba(16, 163, 127, 0.2));
+    }
+
+    .msg-bot:hover {
+      transform: translateY(-3px) scale(1.01);
+      border-color: rgba(139, 92, 246, 0.6);
+      box-shadow: 0 8px 28px rgba(139, 92, 246, 0.35);
+      background: linear-gradient(135deg, rgba(26, 26, 46, 1), rgba(139, 92, 246, 0.15));
+    }
+
+    .bubble {
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .message-actions {
+      display: flex;
+      gap: 6px;
+      margin-top: 8px;
+      opacity: 0;
+      transform: translateY(-5px);
+      transition: all 0.3s;
+    }
+
+    .user-row .message-actions {
+      justify-content: flex-end;
+    }
+
+    .message-row:hover .message-actions {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .copy-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      padding: 5px 10px;
+      border-radius: 6px;
+      cursor: none;
+      font-size: 11px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.2s;
+      backdrop-filter: blur(10px);
+    }
+
+    .copy-btn:hover {
+      background: rgba(16, 163, 127, 0.3);
+      color: var(--accent);
+      border-color: var(--accent);
+      transform: scale(1.1);
+      box-shadow: 0 2px 12px rgba(16, 163, 127, 0.3);
+    }
+
+    .msg-bot.error {
+      background: linear-gradient(135deg, rgba(239, 68, 0.2), rgba(239, 68, 68, 0.08));
+      border: 1px solid rgba(239, 68, 68, 0.4);
+    }
+
+    .typing-indicator {
+      display: flex;
+      gap: 8px;
+      padding: 12px 0;
+    }
+
+    .typing-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), #8b5cf6);
+      animation: typing 1.4s infinite;
+      box-shadow: 0 0 10px rgba(16, 163, 127, 0.5);
+    }
+
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes typing {
+      0%, 60%, 100% { transform: translateY(0) scale(1); opacity: 0.7; }
+      30% { transform: translateY(-12px) scale(1.2); opacity: 1; }
+    }
+
+    /* ===== CHAT INPUT ===== */
+    .input-area {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--bg-glass);
+      backdrop-filter: blur(20px);
+      border-top: 1px solid var(--border);
+      padding: 16px 24px;
+    }
+
+    .input-wrapper {
+      max-width: 800px;
+      margin: 0 auto;
+      display: flex;
+      gap: 12px;
+    }
+
+    .input-area textarea {
+      flex: 1;
+      resize: none;
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--bg-secondary);
+      color: var(--text);
+      height: 54px;
+      font-size: 15px;
+      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      cursor: none;
+    }
+
+    .input-area textarea:hover {
+      border-color: rgba(59, 130, 246, 0.7);
+      background: rgba(26, 26, 46, 0.95);
+      transform: scale(1.02);
+      box-shadow: 0 6px 24px rgba(59, 130, 246, 0.35);
+      height: 60px;
+    }
+
+    .input-area textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      transform: scale(1.03);
+      box-shadow: 0 6px 24px rgba(16, 163, 127, 0.4);
+      height: 62px;
+      background: rgba(16, 163, 127, 0.05);
+    }
+
+    .input-area textarea::placeholder {
+      color: var(--text-secondary);
+      transition: color 0.3s;
+    }
+
+    .input-area textarea:hover::placeholder {
+      color: rgba(59, 130, 246, 0.8);
+    }
+
+    .input-area textarea:focus::placeholder {
+      color: rgba(16, 163, 127, 0.8);
+    }
+
+    .input-area button {
+      padding: 0 24px;
+      border-radius: 12px;
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      cursor: none;
+      font-weight: 600;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .input-area button:hover {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      transform: translateY(-2px) scale(1.08);
+      box-shadow: 0 4px 20px rgba(59, 130, 246, 0.5);
+    }
+
+    /* ===== HISTORY ===== */
+    .history-list {
+      max-width: 700px;
+      margin: 0 auto;
+    }
+
+    .history-item {
+      padding: 18px 22px;
+      background: linear-gradient(135deg, rgba(26, 26, 46, 0.8), rgba(26, 26, 46, 0.6));
+      backdrop-filter: blur(15px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      margin-bottom: 14px;
+      cursor: none;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .history-item:hover {
+      background: linear-gradient(135deg, rgba(16, 163, 127, 0.1), rgba(139, 92, 246, 0.08));
+      transform: translateX(6px) scale(1.02);
+      border-color: rgba(16, 163, 127, 0.3);
+      box-shadow: 0 8px 24px rgba(16, 163, 127, 0.2);
+    }
+
+    .history-item-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+    }
+
+    .history-date {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .history-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .icon-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-secondary);
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      cursor: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s;
+      backdrop-filter: blur(10px);
+    }
+
+    .icon-btn:hover {
+      background: rgba(16, 163, 127, 0.2);
+      color: var(--accent);
+      border-color: var(--accent);
+      transform: scale(1.15) rotate(5deg);
+    }
+
+    .icon-btn.danger:hover {
+      background: rgba(239, 68, 0.25);
+      color: var(--danger);
+      border-color: var(--danger);
+      transform: scale(1.15) rotate(-5deg);
+    }
+
+    .empty-state {
+      text-align: center;
+      color: var(--text-secondary);
+      margin-top: 80px;
+    }
+
+    /* ===== TOAST ===== */
+    .toast {
+      position: fixed;
+      top: 80px;
+      right: 24px;
+      background: var(--bg-glass);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border);
+      padding: 14px 20px;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+      transform: translateX(400px);
+      transition: transform 0.3s;
+      z-index: 1000;
+    }
+
+    .toast.show {
+      transform: translateX(0);
+    }
+
+    /* ===== ANIMATIONS ===== */
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 768px) {
+      .logo { font-size: 36px; }
+      .search-box { padding: 14px; }
+      .content-area { padding: 16px; }
+      .input-area { padding: 12px 16px; }
+      .global-menu { top: 16px; right: 16px; }
+      .cursor-glow { display: none; }
+      * { cursor: auto !important; }
+      .message-content { max-width: 80%; }
+      .message-avatar { width: 32px; height: 32px; font-size: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="cursor-glow" id="cursorGlow"></div>
+
+  <div class="global-menu">
+    <button class="dots-btn" id="dotsBtn">
+      <i data-lucide="more-vertical" style="width:20px;height:20px;"></i>
+    </button>
+    <div class="dropdown" id="dropdown">
+      <button id="homeBtn"><i data-lucide="home" style="width:16px;height:16px;"></i> Home</button>
+      <button id="chatBtn"><i data-lucide="message-square" style="width:16px;height:16px;"></i> Chat</button>
+      <button id="loginMenuBtn"><i data-lucide="log-in" style="width:16px;height:16px;"></i> Login</button>
+      <button id="historyMenuBtn"><i data-lucide="history" style="width:16px;height:16px;"></i> History</button>
+    </div>
+  </div>
+
+  <div class="landing-page" id="landingPage">
+    <div class="search-container">
+      <div class="logo">Mini ChatGPT</div>
+      <p class="subtitle">Ask me anything. I'm here to help.</p>
+      <div class="search-box">
+        <input id="landingSearch" type="text" placeholder="Message Mini ChatGPT..." />
+        <button id="startChatBtn">
+          <i data-lucide="send" style="width:16px;height:16px;"></i>
+          Send
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="app-page" id="appPage">
+    <div class="topbar">
+      <span class="user-badge" id="userBadge">
+        <i data-lucide="user" style="width:16px;height:16px;"></i>
+        Guest
+      </span>
+      <span class="page-title" id="pageTitle">Chat</span>
+    </div>
+
+    <div class="content-area" id="chatSection" style="display:none; flex-direction:column;">
+      <div class="messages" id="messagesBox"></div>
+      <div class="input-area">
+        <div class="input-wrapper">
+          <textarea id="msgInput" placeholder="Message Mini ChatGPT..."></textarea>
+          <button id="sendBtn">
+            <i data-lucide="send" style="width:16px;height:16px;"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-area" id="loginSection" style="display:none;">
+      <div class="login-form" id="loginFormContainer"></div>
+    </div>
+
+    <div class="content-area" id="historySection" style="display:none;">
+      <div class="history-list" id="historyList">
+        <div class="empty-state">
+          <i data-lucide="message-circle" style="width:48px;height:48px;margin:0 auto 16px;opacity:0.3;"></i>
+          <p>No chats yet</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <script>
+  const API_URL = "http://localhost:3000/api/chat";
+  lucide.createIcons();
+
+  // ===== STATE =====
+  let isLoggedIn = false;
+  let userName = "Guest";
+  let currentChatId = null;
+
+  const getUserKey = (key) => isLoggedIn? `${userName}_${key}` : `guest_${key}`;
+  let chats = JSON.parse(localStorage.getItem(getUserKey('chats')) || '{}');
+
+  // ===== ELEMENTS =====
+  const landingPage = document.getElementById("landingPage");
+  const appPage = document.getElementById("appPage");
+  const dotsBtn = document.getElementById("dotsBtn");
+  const dropdown = document.getElementById("dropdown");
+  const loginMenuBtn = document.getElementById("loginMenuBtn");
+  const pageTitle = document.getElementById("pageTitle");
+  const userBadge = document.getElementById("userBadge");
+  const toast = document.getElementById("toast");
+  const cursorGlow = document.getElementById("cursorGlow");
+  const chatSection = document.getElementById("chatSection");
+  const loginSection = document.getElementById("loginSection");
+  const historySection = document.getElementById("historySection");
+  const landingSearch = document.getElementById("landingSearch");
+  const startChatBtn = document.getElementById("startChatBtn");
+  const msgInput = document.getElementById("msgInput");
+  const sendBtn = document.getElementById("sendBtn");
+  const messagesBox = document.getElementById("messagesBox");
+
+  // ===== CURSOR EFFECTS =====
+  document.addEventListener('mousemove', (e) => {
+    cursorGlow.style.left = e.clientX + 'px';
+    cursorGlow.style.top = e.clientY + 'px';
+
+    const x = e.clientX / window.innerWidth;
+    const y = e.clientY / window.innerHeight;
+    const r = Math.floor(x * 255);
+    const g = Math.floor(y * 255);
+    const b = Math.floor((1 - x) * 255);
+
+    if (!cursorGlow.className.includes('search') &&
+       !cursorGlow.className.includes('button') &&
+       !cursorGlow.className.includes('menu') &&
+       !cursorGlow.className.includes('message')) {
+      cursorGlow.style.background = `radial-gradient(circle, rgba(${r}, ${g}, ${b}, 0.6) 0%, transparent 70%)`;
+    }
+  });
+
+  document.addEventListener('mouseover', (e) => {
+    if (e.target.closest('input[type="text"], input[type="password"], textarea,.search-box input')) {
+      cursorGlow.className = 'cursor-glow search';
+    } else if (e.target.closest('.dots-btn,.dropdown button')) {
+      cursorGlow.className = 'cursor-glow menu';
+    } else if (e.target.closest('.msg-user,.msg-bot,.copy-btn')) {
+      cursorGlow.className = 'cursor-glow message';
+    } else if (e.target.closest('button,.icon-btn,.history-item')) {
+      cursorGlow.className = 'cursor-glow button';
+    }
+  });
+
+  document.addEventListener('mouseout', (e) => {
+    if (e.target.closest('input, textarea, button,.icon-btn,.history-item,.dots-btn,.dropdown button,.msg-user,.msg-bot,.copy-btn')) {
+      cursorGlow.className = 'cursor-glow';
+    }
+  });
+
+  // ===== TOAST =====
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add("show");
+    setTimeout(() => toast.classList.remove("show"), 2500);
+  }
+
+  // ===== LOGIN UI =====
+  function updateLoginUI() {
+    if (isLoggedIn) {
+      userBadge.innerHTML = `<i data-lucide="user" style="width:16px;height:16px;"></i> ${userName}`;
+      loginMenuBtn.innerHTML = '<i data-lucide="log-out" style="width:16px;height:16px;"></i> Logout';
+    } else {
+      userBadge.innerHTML = '<i data-lucide="user" style="width:16px;height:16px;"></i> Guest';
+      loginMenuBtn.innerHTML = '<i data-lucide="log-in" style="width:16px;height:16px;"></i> Login';
+    }
+    lucide.createIcons();
+    renderLoginPage();
+  }
+
+  function renderLoginPage() {
+    const container = document.getElementById("loginFormContainer");
+    if (isLoggedIn) {
+      container.innerHTML = `
+        <div class="user-info-card">
+          <i data-lucide="check-circle" style="width:24px;height:24px;color:var(--accent);"></i>
+          <div>
+            <div style="font-weight:600;">Logged in as ${userName}</div>
+            <div style="font-size:13px;color:var(--text-secondary);margin-top:4px;">Your chats are being saved</div>
+          </div>
+        </div>
+        <button class="danger" id="doLogoutBtn">Logout</button>
+      `;
+      document.getElementById("doLogoutBtn").onclick = logout;
+    } else {
+      container.innerHTML = `
+        <h2>Welcome back</h2>
+        <p>Login to save your chat history</p>
+        <div class="input-group">
+          <label>Username</label>
+          <input id="loginName" type="text" placeholder="Enter username" />
+        </div>
+        <div class="input-group">
+          <label>Password</label>
+          <input id="loginPass" type="password" placeholder="Enter password" />
+        </div>
+        <button id="doLoginBtn">Login</button>
+        <div class="error" id="loginError"></div>
+      `;
+      document.getElementById("doLoginBtn").onclick = login;
+    }
+    lucide.createIcons();
+  }
+
+  // ===== DROPDOWN =====
+  dotsBtn.onclick = (e) => {
+    e.stopPropagation();
+    dropdown.classList.toggle("show");
+  };
+  document.addEventListener("click", () => dropdown.classList.remove("show"));
+
+  // ===== NAVIGATION =====
+  function showPage(page) {
+    landingPage.style.display = "none";
+    appPage.classList.add("active");
+    chatSection.style.display = "none";
+    loginSection.style.display = "none";
+    historySection.style.display = "none";
+    document.querySelectorAll('.dropdown button').forEach(btn => btn.classList.remove('active'));
+
+    if (page === "home") {
+      landingPage.style.display = "flex";
+      appPage.classList.remove("active");
+      document.getElementById("homeBtn").classList.add('active');
+    } else if (page === "chat") {
+      chatSection.style.display = "flex";
+      pageTitle.textContent = "Chat";
+      document.getElementById("chatBtn").classList.add('active');
+      if (!currentChatId ||!chats[currentChatId]) {
+        startNewChat();
+      } else {
+        renderMessages();
+      }
+      setTimeout(() => msgInput.focus(), 100);
+    } else if (page === "login") {
+      loginSection.style.display = "block";
+      pageTitle.textContent = "Account";
+      document.getElementById("loginMenuBtn").classList.add('active');
+      renderLoginPage();
+    } else if (page === "history") {
+      historySection.style.display = "block";
+      pageTitle.textContent = "History";
+      document.getElementById("historyMenuBtn").classList.add('active');
+      renderHistory();
+    }
+  }
+
+  document.getElementById("homeBtn").onclick = () => showPage("home");
+  document.getElementById("chatBtn").onclick = () => showPage("chat");
+  loginMenuBtn.onclick = () => isLoggedIn? logout() : showPage("login");
+  document.getElementById("historyMenuBtn").onclick = () => showPage("history");
+
+  // ===== CHAT MANAGEMENT =====
+  function saveChats() {
+    localStorage.setItem(getUserKey('chats'), JSON.stringify(chats));
+  }
+
+  function startNewChat(firstMsg = "") {
+    const id = Date.now().toString();
+    chats[id] = {
+      title: firstMsg.slice(0, 30) || "New chat",
+      messages: [],
+      timestamp: Date.now()
+    };
+    currentChatId = id;
+    saveChats();
+    showPage("chat");
+    if (firstMsg) {
+      msgInput.value = firstMsg;
+      sendMessage();
+    } else {
+      renderMessages();
+    }
+  }
+
+  startChatBtn.onclick = () => {
+    const text = landingSearch.value.trim();
+    if (!text) return;
+    landingSearch.value = "";
+    startNewChat(text);
+  };
+
+  landingSearch.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      startChatBtn.click();
+    }
+  });
+
+  // ===== LOGIN/LOGOUT =====
+  function login() {
+    const name = document.getElementById("loginName").value.trim();
+    const pass = document.getElementById("loginPass").value.trim();
+    const errorEl = document.getElementById("loginError");
+
+    if (!name ||!pass) {
+      errorEl.textContent = "Name and password required";
+      return;
+    }
+
+    isLoggedIn = true;
+    userName = name;
+    chats = JSON.parse(localStorage.getItem(getUserKey('chats')) || '{}');
+    currentChatId = null;
+    localStorage.setItem('currentUser', JSON.stringify({name, loggedIn: true}));
+    updateLoginUI();
+    showToast("Welcome " + name + "!");
+    showPage("chat");
+  }
+
+  function logout() {
+    isLoggedIn = false;
+    userName = "Guest";
+    chats = JSON.parse(localStorage.getItem(getUserKey('chats')) || '{}');
+    currentChatId = null;
+    localStorage.removeItem('currentUser');
+    updateLoginUI();
+    showToast("Logged out successfully");
+  }
+
+  // ===== HISTORY =====
+  function deleteChat(chatId, e) {
+    e.stopPropagation();
+    const deletedChat = chats[chatId];
+    delete chats[chatId];
+    if (currentChatId === chatId) {
+      currentChatId = null;
+      showPage("home");
+    }
+    saveChats();
+    renderHistory();
+    showToast(`"${deletedChat.title}" deleted ✓`);
+  }
+
+  function shareChat(chatId, e) {
+    e.stopPropagation();
+    const chat = chats[chatId];
+    if (!chat) return;
+
+    let shareText = `💬 Chat: ${chat.title}\n\n`;
+    chat.messages.forEach(m => {
+      const role = m.role === 'user'? '👤 You' : '🤖 AI';
+      shareText += `${role}: ${m.content}\n\n`;
+    });
+
+    navigator.clipboard.writeText(shareText).then(() => {
+      showToast("Copied to clipboard! ✨");
+    }).catch(() => {
+      showToast("Failed to copy");
+    });
+  }
+
+  function renderHistory() {
+    const list = document.getElementById("historyList");
+    const ids = Object.keys(chats).sort((a,b) => chats[b].timestamp - chats[a].timestamp);
+
+    if (ids.length === 0) {
+      list.innerHTML = `<div class="empty-state">
+        <i data-lucide="message-circle" style="width:48px;height:48px;margin:0 auto 16px;opacity:0.3;"></i>
+        <p>No chats yet</p>
+      </div>`;
+      lucide.createIcons();
+      return;
+    }
+
+    list.innerHTML = "";
+    ids.forEach((id) => {
+      const chat = chats[id];
+      const date = new Date(chat.timestamp).toLocaleDateString('en-US', {
+        month: 'short', day: 'numeric', year: 'numeric'
+      });
+      const div = document.createElement("div");
+      div.className = "history-item";
+      div.innerHTML = `
+        <div class="history-item-left">
+          <i data-lucide="message-square" style="width:18px;height:18px;"></i>
+          <div>
+            <div>${chat.title}</div>
+            <div class="history-date">${date}</div>
+          </div>
+        </div>
+        <div class="history-actions">
+          <button class="icon-btn" title="Share">
+            <i data-lucide="share-2" style="width:16px;height:16px;"></i>
+          </button>
+          <button class="icon-btn danger" title="Delete">
+            <i data-lucide="trash-2" style="width:16px;height:16px;"></i>
+          </button>
+        </div>
+      `;
+
+      div.querySelector('.history-item-left').onclick = () => {
+        currentChatId = id;
+        showPage("chat");
+        renderMessages();
+      };
+
+      div.querySelector('.icon-btn[title="Share"]').onclick = (e) => shareChat(id, e);
+      div.querySelector('.icon-btn[title="Delete"]').onclick = (e) => deleteChat(id, e);
+      list.appendChild(div);
+    });
+    lucide.createIcons();
+  }
+
+  // ===== MESSAGES =====
+  function renderMessages() {
+    if (!currentChatId ||!chats[currentChatId]) return;
+    messagesBox.innerHTML = "";
+    chats[currentChatId].messages.forEach((m, index) => {
+      const isUser = m.role === "user";
+      const row = document.createElement("div");
+      row.className = `message-row ${isUser? 'user-row' : 'ai-row'}`;
+
+      const avatar = isUser? "🧑" : "🤖";
+      const name = isUser? "You" : "Mini ChatGPT";
+      const time = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      const isError = m.content.toLowerCase().includes('error');
+
+      row.innerHTML = `
+        <div class="message-avatar ${isUser? 'user-avatar' : 'ai-avatar'}">${avatar}</div>
+        <div class="message-content">
+          <div class="message-header">
+            <span class="message-name">${name}</span>
+            <span class="message-time">${time}</span>
+          </div>
+          <div class="${isUser? 'msg-user' : 'msg-bot'} ${isError? 'error' : ''}">
+            <div class="bubble">${m.content}</div>
+            <div class="message-actions">
+              <button class="copy-btn" onclick="copyMessage(${index})">
+                <i data-lucide="copy" style="width:11px;height:11px;"></i>
+                Copy
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+      messagesBox.appendChild(row);
+    });
+    lucide.createIcons();
+    messagesBox.scrollTop = messagesBox.scrollHeight;
+  }
+
+  function copyMessage(index) {
+    const chat = chats[currentChatId];
+    if (!chat ||!chat.messages[index]) return;
+    const text = chat.messages[index].content;
+    navigator.clipboard.writeText(text).then(() => {
+      showToast("Copied to clipboard! ✨");
+    }).catch(() => {
+      showToast("Failed to copy");
+    });
+  }
+
+  async function sendMessage() {
+    const text = msgInput.value.trim();
+    if (!text) {
+      if (!currentChatId) startNewChat();
+      return;
+    }
+
+    if (!currentChatId ||!chats[currentChatId]) {
+      startNewChat(text);
+      return;
+    }
+
+    const chat = chats[currentChatId];
+    chat.messages.push({ role: "user", content: text });
+    chat.timestamp = Date.now();
+    msgInput.value = "";
+    renderMessages();
+    saveChats();
+
+    const typingRow = document.createElement("div");
+    typingRow.className = "message-row ai-row";
+    typingRow.innerHTML = `
+      <div class="message-avatar ai-avatar">🤖</div>
+      <div class="message-content">
+        <div class="message-header">
+          <span class="message-name">Mini ChatGPT</span>
+        </div>
+        <div class="msg-bot">
+          <div class="typing-indicator">
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+          </div>
+        </div>
+      </div>
+    `;
+    messagesBox.appendChild(typingRow);
+    messagesBox.scrollTop = messagesBox.scrollHeight;
+
+    try {
+      const res = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: userName,
+          chatId: currentChatId,
+          language: "en",
+          history: chat.messages,
+        }),
+      });
+      const data = await res.json();
+      typingRow.remove();
+      chat.messages.push({ role: "assistant", content: data.reply || "No reply" });
+      renderMessages();
+      saveChats();
+    } catch (e) {
+      typingRow.remove();
+      chat.messages.push({ role: "assistant", content: "Error: " + e.message });
+      renderMessages();
+      saveChats();
+    }
+  }
+
+  sendBtn.onclick = sendMessage;
+  msgInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" &&!e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  // ===== INIT =====
+  const savedUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
+  if (savedUser?.loggedIn) {
+    isLoggedIn = true;
+    userName = savedUser.name;
+    chats = JSON.parse(localStorage.getItem(getUserKey('chats')) || '{}');
+  }
+  updateLoginUI();
+</script>
+</body>
+</html>
